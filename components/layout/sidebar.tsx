@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { FileVideo, BookOpen, Type } from 'lucide-react'
@@ -34,8 +35,14 @@ export function Sidebar() {
             isExpanded ? 'justify-start' : 'justify-center'
           )}
         >
-          <div className="w-10 h-10 rounded-2xl bg-palette-2 flex items-center justify-center flex-shrink-0">
-            <span className="text-lg font-bold text-foreground">S</span>
+          <div className="relative w-10 h-10 overflow-hidden rounded-2xl bg-palette-2 flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Signalia"
+              fill
+              sizes="40px"
+              className="object-contain p-1"
+            />
           </div>
           {isExpanded && <span className="font-semibold text-lg text-foreground">Signalia</span>}
         </div>

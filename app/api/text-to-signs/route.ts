@@ -50,20 +50,50 @@ export async function POST(req: NextRequest) {
 
   // 2. Call Groq — same approach as the notebook
   const systemPrompt = `Eres un experto en Lengua de Señas Mexicana (LSM).
-Tu tarea es convertir texto en español a una secuencia de señas LSM.
+  Convierte texto español a glosa LSM primitiva, como hablaría Yoda.
 
-SEÑAS DISPONIBLES (usa estos valores EXACTOS en la glosa):
-${signsList}
+  SEÑAS DISPONIBLES (usa EXACTAMENTE estos valores):
+  ${signsList}
 
-REGLAS:
-1. Convierte la frase al orden gramatical de LSM (Sujeto-Objeto-Verbo)
-2. Usa SOLO valores de la lista de señas disponibles
-3. Omite artículos (el, la, los, las, un, una)
-4. Omite preposiciones sin seña (de, en, con, a)
-5. Prefiere señas compuestas cuando existen (ej: "como estas" en lugar de "como" + "estar")
-6. Si una palabra no está, usa el sinónimo más cercano de la lista
-7. Responde ÚNICAMENTE con JSON exactamente así:
-{"glosa": ["sena1", "sena2"], "traduccion_literal": "SENA1 SENA2"}`
+  REGLAS ESTRICTAS:
+  1. ORDEN LSM: Tiempo → Sujeto → Objeto → Verbo (como Yoda)
+    - "Yo me llamo Leonardo" → yo + [deletreo] + nombre
+    - "¿Cómo estás?" → como estas (es una sola seña compuesta, úsala)
+
+  2. VERBOS: siempre en infinitivo, nunca conjugados
+    - "me llamo" → yo + nombre (o deletreo)
+    - "estás" → estar
+    - "tengo" → yo + tener (si existe)
+
+  3. ARTÍCULOS Y PREPOSICIONES: omitir completamente
+    - "el perro de mi casa" → perro casa yo
+
+  4. NOMBRES PROPIOS: deletrear letra por letra usando solo las letras del alfabeto disponibles
+    - "Leonardo" → l + e + o + n + a + r + d + o
+    - "María" → m + a + r + i + a
+    - IMPORTANTE: cada letra es una seña separada en la glosa
+
+  5. SEÑAS COMPUESTAS: prioriza frases completas sobre palabras sueltas
+    - Usa "como estas" en vez de "como" + "estar"
+    - Usa "como te llamas" en vez de "como" + "nombre"
+    - Usa "buenas noches" en vez de "buenas" + "noches"
+    - Usa "tu nombre" en vez de "tu" + "nombre"
+
+  6. PALABRAS SIN SEÑA: usa el sinónimo más cercano disponible
+    - Si no existe, omítela
+
+  7. RESPONDE SOLO con este JSON, sin explicaciones:
+  {"glosa": ["sena1", "sena2"], "traduccion_literal": "SENA1 SENA2"}
+
+  EJEMPLOS:
+  Input: "Hola me llamo Leonardo"
+  Output: {"glosa": ["hola", "yo", "l", "e", "o", "n", "a", "r", "d", "o"], "traduccion_literal": "HOLA YO L-E-O-N-A-R-D-O"}
+
+  Input: "¿Cómo estás tú?"
+  Output: {"glosa": ["como estas", "tu"], "traduccion_literal": "COMO-ESTAR TU"}
+
+  Input: "Buenas noches, ¿cómo te llamas?"
+  Output: {"glosa": ["buenas noches", "como te llamas"], "traduccion_literal": "BUENAS-NOCHES COMO-TE-LLAMAS"}`
 
   let glosa: string[] = []
   let traduccion = ''
@@ -88,20 +118,30 @@ REGLAS:
     return NextResponse.json({ error: 'Error al procesar con LLM', detail: String(err) }, { status: 500 })
   }
 
-  // 3. Match each gloss item to a sign
+  // 3. Match cada glosa a una seña
   const results = glosa.map((sena) => {
     const normSena = normalize(sena)
 
-    // Exact match first
+    // Exacto
     let sign = signLookup.get(normSena)
 
-    // Partial match: sena contains key OR key contains sena
+    // Parcial solo si es frase compuesta (más de 1 palabra)
+    // Evita que "tu" matchee "cuanto" o "tu nombre"
     if (!sign) {
-      for (const [key, val] of signLookup) {
-        if (normSena === key || normSena.includes(key) || key.includes(normSena)) {
-          sign = val
-          break
+      const words = normSena.split(' ')
+      if (words.length > 1) {
+        // Buscar la seña compuesta más larga que coincida
+        let bestMatch: (typeof signs)[0] | undefined
+        let bestLength = 0
+        for (const [key, val] of signLookup) {
+          if (key.includes(normSena) || normSena.includes(key)) {
+            if (key.length > bestLength) {
+              bestMatch = val
+              bestLength = key.length
+            }
+          }
         }
+        sign = bestMatch
       }
     }
 

@@ -78,7 +78,6 @@ export default function SignDetailPage({ params }: PageProps) {
                     autoPlay
                     muted
                     loop
-                    controls
                     playsInline
                     className="w-full h-full object-cover"
                   />

@@ -25,13 +25,6 @@ export default function JuegoClient() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  useEffect(() => {
-    if (isMobile && isLoaded && started) {
-      requestFullscreen(true)
-    }
-  }, [isLoaded, isMobile, started, requestFullscreen])
-
-  // ── Mobile: landing card ────────────────────────────────────────────────────
   if (isMobile && !started) {
     return (
       <div className="px-4 py-8 flex flex-col items-center justify-center min-h-[60vh] animate-fade-in-up">
@@ -60,11 +53,9 @@ export default function JuegoClient() {
     )
   }
 
-  // ── Desktop ─────────────────────────────────────────────────────────────────
   if (!isMobile) {
     return (
       <div className="flex h-[calc(100vh-64px)]">
-        {/* Info sidebar */}
         <aside className="hidden md:flex md:flex-col md:w-72 md:flex-shrink-0 border-r border-border bg-palette-1 overflow-y-auto">
           <div className="p-6 flex flex-col gap-5">
             <div className="flex items-center gap-3">
@@ -92,7 +83,6 @@ export default function JuegoClient() {
           </div>
         </aside>
 
-        {/* Game canvas */}
         <main className="flex-1 relative bg-palette-1 overflow-hidden" ref={containerRef}>
           {!isLoaded && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 bg-palette-1">
@@ -115,28 +105,27 @@ export default function JuegoClient() {
     )
   }
 
-  // ── Mobile: game running ────────────────────────────────────────────────────
   return (
-    <div className="relative w-full" style={{ height: 'calc(100vh - 64px)' }}>
-      {!isLoaded && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-palette-1 px-6">
-          <div className="w-16 h-16 rounded-full bg-palette-3 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-palette-2 animate-spin" />
+    <div className="px-4 py-6 flex justify-center">
+      <div className="relative w-full max-w-[960px] aspect-video max-h-[48vh] rounded-3xl overflow-hidden border border-border bg-palette-1">
+        {!isLoaded && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 bg-palette-1 px-6">
+            <div className="w-16 h-16 rounded-full bg-palette-3 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-palette-2 animate-spin" />
+            </div>
+            <p className="text-lg font-semibold text-foreground">Cargando juego...</p>
+            <p className="text-2xl font-bold text-palette-2">{loadingPct}%</p>
+            <LoadingBar pct={loadingPct} />
           </div>
-          <p className="text-lg font-semibold text-foreground">Cargando juego...</p>
-          <p className="text-2xl font-bold text-palette-2">{loadingPct}%</p>
-          <LoadingBar pct={loadingPct} />
-        </div>
-      )}
-      <Unity
-        unityProvider={unityProvider}
-        style={{ width: '100%', height: '100%', display: 'block' }}
-      />
+        )}
+        <Unity
+          unityProvider={unityProvider}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        />
+      </div>
     </div>
   )
 }
-
-// ── Sub-components ───────────────────────────────────────────────────────────
 
 function LoadingBar({ pct }: { pct: number }) {
   return (

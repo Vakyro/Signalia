@@ -93,11 +93,11 @@ export function AbecedarioMode() {
           if (name !== lastGesture && isActiveRef.current) {
             setCurrentLetter(name)
             if (name === 'espacio') {
-              setSequence((s) => s + ' ')
+              setSequence((prev) => prev + ' ')
             } else if (name === 'del') {
-              setSequence((s) => s.slice(0, -1))
+              setSequence((prev) => prev.slice(0, -1))
             } else {
-              setSequence((s) => s + name)
+              setSequence((prev) => prev + name)
             }
             lastGesture = name
           }

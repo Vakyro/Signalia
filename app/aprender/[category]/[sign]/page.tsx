@@ -31,7 +31,6 @@ export default function SignDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true)
 
   const categoryData = CATEGORIES.find((c) => c.id === category)
-  const categoryTyped = category as Category
   const isAlphabet = category === 'alfabeto'
 
   useEffect(() => {
@@ -83,7 +82,7 @@ export default function SignDetailPage({ params }: PageProps) {
                   />
                 ) : (
                   <span className={cn('text-foreground', isAlphabet ? 'text-8xl font-bold' : 'text-8xl')}>
-                    {getSignEmoji(displayName, categoryTyped)}
+                    {getSignEmoji(displayName, category as Category)}
                   </span>
                 )}
               </div>

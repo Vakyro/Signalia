@@ -44,7 +44,6 @@ export default function RecordSignPage({ params }: PageProps) {
   const countdownIntervalRef = useRef<number | null>(null)
 
   const categoryData = CATEGORIES.find((c) => c.id === category)
-  const signIndex = sign ? 0 : 0
 
   useEffect(() => {
     async function fetchSign() {
@@ -185,6 +184,7 @@ export default function RecordSignPage({ params }: PageProps) {
   if (!categoryData) return null
 
   const displayName = sign?.name ?? decodeURIComponent(slug)
+  const signIndex = Math.max(0, categoryData.signs.indexOf(displayName))
 
   // Botones compartidos mobile/desktop
   const ActionButtons = () => (

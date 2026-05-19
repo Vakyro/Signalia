@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Loader2, Trash2, Play, ChevronRight } from 'lucide-react'
+import { Loader2, Trash2, Play, ChevronRight, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SignResult {
@@ -260,6 +261,22 @@ export default function TextoASenaPage() {
             <p className="text-muted-foreground">Escribe una frase para ver las señas en LSM</p>
           </div>
         )}
+
+        {/* Contribute CTA */}
+        <div className="mt-4 bg-palette-1 rounded-3xl p-6 border border-border animate-fade-in-up">
+          <h3 className="text-base font-semibold text-foreground mb-1">¿Nos ayudas a mejorar?</h3>
+          <p className="text-muted-foreground text-sm mb-4">
+            Graba una seña y contribuye a entrenar nuestros modelos de traducción
+          </p>
+          <Link
+            href="/contribuir"
+            className="flex items-center gap-2 px-4 py-2.5 bg-palette-2 text-foreground rounded-xl
+              font-medium text-sm w-fit hover:bg-palette-4 active:scale-95 transition-all duration-200"
+          >
+            Colaborar grabando una seña
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
     </AppLayout>
   )

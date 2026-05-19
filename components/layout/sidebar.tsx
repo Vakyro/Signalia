@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileVideo, BookOpen, Type, Gamepad2 } from 'lucide-react'
+import { FileVideo, BookOpen, Type, Gamepad2, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/traducir', label: 'Traducir', icon: FileVideo },
   { href: '/texto-a-sena', label: 'Texto a Sena', icon: Type },
   { href: '/aprender', label: 'Biblioteca', icon: BookOpen },
+  { href: '/practicar', label: 'Aprender', icon: GraduationCap },
   { href: '/juego', label: 'Juego', icon: Gamepad2 },
 ]
 

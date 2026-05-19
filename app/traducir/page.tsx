@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { AbecedarioMode } from '@/components/translate/abecedario-mode'
 import { SenasMode } from '@/components/translate/senas-mode'
+import Link from 'next/link'
 import {
   Camera,
   Upload,
@@ -13,6 +14,7 @@ import {
   Check,
   Loader2,
   ChevronDown,
+  ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast-provider'
@@ -112,6 +114,7 @@ export default function TraducirPage() {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null)
   const [processingState, setProcessingState] = useState<ProcessingState>('idle')
   const [copied, setCopied] = useState(false)
 
@@ -121,14 +124,39 @@ export default function TraducirPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const countdownIntervalRef = useRef<number | null>(null)
+  const processingTimeoutsRef = useRef<number[]>([])
   const { showToast } = useToast()
 
   useEffect(() => {
     return () => {
       stopStream()
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      if (countdownIntervalRef.current !== null) {
+        window.clearInterval(countdownIntervalRef.current)
+        countdownIntervalRef.current = null
+      }
+      processingTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout))
+      processingTimeoutsRef.current = []
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
+  useEffect(() => {
+    if (!uploadedFile) {
+      setUploadedPreviewUrl(null)
+      return
+    }
+
+    const url = URL.createObjectURL(uploadedFile)
+    setUploadedPreviewUrl(url)
+
+    return () => URL.revokeObjectURL(url)
+  }, [uploadedFile])
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -137,12 +165,19 @@ export default function TraducirPage() {
 
   function resetAll() {
     stopStream()
+    if (countdownIntervalRef.current !== null) {
+      window.clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+    processingTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout))
+    processingTimeoutsRef.current = []
     mediaRecorderRef.current?.stop()
     setRecordingState('idle')
     setCountdown(3)
     setRecordedBlob(null)
     if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }
     setUploadedFile(null)
+    setUploadedPreviewUrl(null)
     setProcessingState('idle')
     setCopied(false)
   }
@@ -166,10 +201,19 @@ export default function TraducirPage() {
       let count = 3
       setCountdown(count)
       await new Promise<void>((resolve) => {
-        const iv = setInterval(() => {
+        if (countdownIntervalRef.current !== null) {
+          window.clearInterval(countdownIntervalRef.current)
+        }
+        countdownIntervalRef.current = window.setInterval(() => {
           count--
           setCountdown(count)
-          if (count === 0) { clearInterval(iv); resolve() }
+          if (count === 0) {
+            if (countdownIntervalRef.current !== null) {
+              window.clearInterval(countdownIntervalRef.current)
+              countdownIntervalRef.current = null
+            }
+            resolve()
+          }
         }, 1000)
       })
 
@@ -205,10 +249,12 @@ export default function TraducirPage() {
   }
 
   function startProcessing() {
+    processingTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout))
+    processingTimeoutsRef.current = []
     setProcessingState('analyzing')
-    setTimeout(() => setProcessingState('detecting'), 1200)
-    setTimeout(() => setProcessingState('interpreting'), 2400)
-    setTimeout(() => setProcessingState('done'), 3600)
+    processingTimeoutsRef.current.push(window.setTimeout(() => setProcessingState('detecting'), 1200))
+    processingTimeoutsRef.current.push(window.setTimeout(() => setProcessingState('interpreting'), 2400))
+    processingTimeoutsRef.current.push(window.setTimeout(() => setProcessingState('done'), 3600))
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -321,6 +367,24 @@ export default function TraducirPage() {
 
         {/* ── SEÑAS mode ── */}
         {modelMode === 'senas' && <SenasMode />}
+
+        {/* Contribute CTA */}
+        {modelMode !== 'frases' && (
+          <div className="mt-8 bg-palette-1 rounded-3xl p-6 border border-border animate-fade-in-up">
+            <h3 className="text-base font-semibold text-foreground mb-1">¿Nos ayudas a mejorar?</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Graba una seña y contribuye a entrenar nuestros modelos de traducción
+            </p>
+            <Link
+              href="/contribuir"
+              className="flex items-center gap-2 px-4 py-2.5 bg-palette-2 text-foreground rounded-xl
+                font-medium text-sm w-fit hover:bg-palette-4 active:scale-95 transition-all duration-200"
+            >
+              Colaborar grabando una seña
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
 
         {/* ── FRASES COMPLETAS mode ── */}
         {modelMode === 'frases' && (
@@ -486,7 +550,7 @@ export default function TraducirPage() {
                   <>
                     <div className="aspect-video bg-palette-1 rounded-3xl border border-border overflow-hidden mb-6">
                       <video
-                        src={URL.createObjectURL(uploadedFile)}
+                        src={uploadedPreviewUrl ?? undefined}
                         controls
                         playsInline
                         className="w-full h-full object-contain"
@@ -512,6 +576,23 @@ export default function TraducirPage() {
                     </div>
                   </>
                 )}
+              </div>
+            )}
+            {/* Contribute CTA — frases idle */}
+            {recordingState === 'idle' && !uploadedFile && (
+              <div className="mt-8 bg-palette-1 rounded-3xl p-6 border border-border animate-fade-in-up">
+                <h3 className="text-base font-semibold text-foreground mb-1">¿Nos ayudas a mejorar?</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Graba una seña y contribuye a entrenar nuestros modelos de traducción
+                </p>
+                <Link
+                  href="/contribuir"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-palette-2 text-foreground rounded-xl
+                    font-medium text-sm w-fit hover:bg-palette-4 active:scale-95 transition-all duration-200"
+                >
+                  Colaborar grabando una seña
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             )}
           </>

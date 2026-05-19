@@ -30,7 +30,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).slice(2)
     setToasts((prev) => [...prev, { id, message, type }])
-    
+
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
@@ -43,8 +43,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      
-      {/* Toast Container */}
+
       <div className="fixed bottom-20 md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 z-50 flex flex-col gap-2">
         {toasts.map((toast) => (
           <div
@@ -52,13 +51,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={cn(
               'flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg',
               'animate-fade-in-up min-w-[280px] max-w-[90vw] md:max-w-[400px]',
-              toast.type === 'error' ? 'bg-palette-7 text-foreground' : 'bg-palette-3 text-foreground'
+              toast.type === 'error' ? 'bg-palette-7 text-foreground' : 'bg-palette-3 text-foreground',
             )}
           >
             <span className="text-sm font-medium flex-1">{toast.message}</span>
             <button
               onClick={() => dismissToast(toast.id)}
-              className="p-1 rounded-xl hover:bg-black/10 transition-colors"
+              className="p-1 rounded-xl hover:bg-palette-6 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>

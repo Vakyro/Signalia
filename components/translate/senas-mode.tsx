@@ -220,7 +220,7 @@ export function SenasMode() {
     animFrameRef.current = requestAnimationFrame(detect)
   }
 
-  const currentEntry = SIGN_CATALOG.find((s) => s.name === currentAction)
+  const currentEntry = SIGN_CATALOG.find((entry) => entry.name === currentAction)
   const isModelReady = actionStatus === 'ready'
   const isLoading = isRequesting || isHolisticLoading
 
@@ -334,7 +334,7 @@ export function SenasMode() {
       {/* Expandable signs panel */}
       <div className="rounded-2xl border border-border overflow-hidden">
         <button
-          onClick={() => setIsExpanded((e) => !e)}
+          onClick={() => setIsExpanded((prev) => !prev)}
           className="w-full flex items-center justify-between px-4 py-3 bg-palette-1 hover:bg-palette-3 transition-colors"
         >
           <span className="text-sm font-medium text-foreground">
@@ -353,7 +353,7 @@ export function SenasMode() {
         {isExpanded && (
           <div className="p-4 bg-card border-t border-border space-y-5">
             {CATEGORIES.map((cat) => {
-              const signs = SIGN_CATALOG.filter((s) => s.category === cat)
+              const signs = SIGN_CATALOG.filter((sign) => sign.category === cat)
               if (signs.length === 0) return null
               return (
                 <div key={cat}>

@@ -5,12 +5,12 @@ import { ToastProvider } from '@/components/ui/toast-provider'
 import { ModelProvider } from '@/lib/models/model-context'
 import './globals.css'
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
 })
 
-const geistMono = Geist_Mono({ 
+const geistMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-geist-mono',
 })
@@ -35,9 +35,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${geistMono.variable} bg-background`}>
       <body className="font-sans antialiased">
         <ToastProvider>
-          <ModelProvider>
-            {children}
-          </ModelProvider>
+          <ModelProvider>{children}</ModelProvider>
         </ToastProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

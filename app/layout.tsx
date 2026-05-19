@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ToastProvider } from '@/components/ui/toast-provider'
+import { ModelProvider } from '@/lib/models/model-context'
 import './globals.css'
 
 const inter = Inter({ 
@@ -34,7 +35,9 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${geistMono.variable} bg-background`}>
       <body className="font-sans antialiased">
         <ToastProvider>
-          {children}
+          <ModelProvider>
+            {children}
+          </ModelProvider>
         </ToastProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

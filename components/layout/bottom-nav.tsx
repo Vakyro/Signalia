@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileVideo, BookOpen, Type } from 'lucide-react'
+import { FileVideo, BookOpen, Type, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/traducir', label: 'Traducir', icon: FileVideo },
   { href: '/texto-a-sena', label: 'Texto', icon: Type },
   { href: '/aprender', label: 'Biblioteca', icon: BookOpen },
+  { href: '/juego', label: 'Juego', icon: Gamepad2 },
 ]
 
 export function BottomNav() {

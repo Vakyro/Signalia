@@ -2,10 +2,22 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
-import { Camera, Upload, Video, RotateCcw, Copy, Check, Loader2 } from 'lucide-react'
+import { AbecedarioMode } from '@/components/translate/abecedario-mode'
+import { SenasMode } from '@/components/translate/senas-mode'
+import {
+  Camera,
+  Upload,
+  Video,
+  RotateCcw,
+  Copy,
+  Check,
+  Loader2,
+  ChevronDown,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast-provider'
 
+type ModelMode = 'abecedario' | 'senas' | 'frases'
 type Tab = 'grabar' | 'subir'
 type RecordingState = 'idle' | 'requesting' | 'countdown' | 'recording' | 'preview'
 type ProcessingState = 'idle' | 'analyzing' | 'detecting' | 'interpreting' | 'done'
@@ -22,7 +34,78 @@ const MOCK_RESULT = {
   ],
 }
 
+const MODE_OPTIONS: { value: ModelMode; label: string }[] = [
+  { value: 'abecedario', label: 'Abecedario' },
+  { value: 'senas', label: 'Señas' },
+  { value: 'frases', label: 'Frases completas' },
+]
+
+function ModelSelector({
+  value,
+  onChange,
+}: {
+  value: ModelMode
+  onChange: (mode: ModelMode) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = MODE_OPTIONS.find((o) => o.value === value)!
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative w-fit mb-6">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          'flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-border bg-palette-1',
+          'text-sm font-medium text-foreground hover:bg-palette-3 transition-colors',
+        )}
+      >
+        {current.label}
+        <ChevronDown
+          className={cn(
+            'w-4 h-4 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[180px] bg-card border border-border rounded-2xl shadow-md overflow-hidden animate-fade-in-up">
+          {MODE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+              className={cn(
+                'w-full text-left px-4 py-3 text-sm transition-colors',
+                option.value === value
+                  ? 'bg-palette-3 text-foreground font-medium'
+                  : 'text-foreground hover:bg-palette-1',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TraducirPage() {
+  const [modelMode, setModelMode] = useState<ModelMode>('frases')
   const [activeTab, setActiveTab] = useState<Tab>('grabar')
   const [recordingState, setRecordingState] = useState<RecordingState>('idle')
   const [countdown, setCountdown] = useState(3)
@@ -50,6 +133,23 @@ export default function TraducirPage() {
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
+  }
+
+  function resetAll() {
+    stopStream()
+    mediaRecorderRef.current?.stop()
+    setRecordingState('idle')
+    setCountdown(3)
+    setRecordedBlob(null)
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }
+    setUploadedFile(null)
+    setProcessingState('idle')
+    setCopied(false)
+  }
+
+  function changeMode(mode: ModelMode) {
+    if (mode !== 'frases') resetAll()
+    setModelMode(mode)
   }
 
   async function startRecording() {
@@ -111,18 +211,6 @@ export default function TraducirPage() {
     setTimeout(() => setProcessingState('done'), 3600)
   }
 
-  function resetAll() {
-    stopStream()
-    mediaRecorderRef.current?.stop()
-    setRecordingState('idle')
-    setCountdown(3)
-    setRecordedBlob(null)
-    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }
-    setUploadedFile(null)
-    setProcessingState('idle')
-    setCopied(false)
-  }
-
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -157,8 +245,8 @@ export default function TraducirPage() {
 
   const switchTab = (tab: Tab) => { resetAll(); setActiveTab(tab) }
 
-  // ── Shared: processing / result views ──────────────────────────────────────
-  if (processingState !== 'idle' && processingState !== 'done') {
+  // ── Frases: processing view ──────────────────────────────────────────────────
+  if (modelMode === 'frases' && processingState !== 'idle' && processingState !== 'done') {
     return (
       <AppLayout title="Traducir">
         <div className="px-4 md:px-6 py-6 max-w-4xl mx-auto flex flex-col items-center justify-center py-24 animate-fade-in-up">
@@ -174,7 +262,8 @@ export default function TraducirPage() {
     )
   }
 
-  if (processingState === 'done') {
+  // ── Frases: result view ──────────────────────────────────────────────────────
+  if (modelMode === 'frases' && processingState === 'done') {
     return (
       <AppLayout title="Traducir">
         <div className="px-4 md:px-6 py-6 max-w-4xl mx-auto animate-fade-in-up">
@@ -219,195 +308,213 @@ export default function TraducirPage() {
     )
   }
 
-  // ── Main view ───────────────────────────────────────────────────────────────
+  // ── Main view ────────────────────────────────────────────────────────────────
   return (
     <AppLayout title="Traducir">
       <div className="px-4 md:px-6 py-6 max-w-4xl mx-auto">
-        {/* Tab Toggle */}
-        <div className="flex gap-2 p-1 bg-palette-1 rounded-2xl w-fit mb-8">
-          {(['grabar', 'subir'] as Tab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => switchTab(tab)}
-              className={cn(
-                'px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                activeTab === tab
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <span className="flex items-center gap-2">
-                {tab === 'grabar' ? <Video className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                {tab === 'grabar' ? 'Grabar video' : 'Subir video'}
-              </span>
-            </button>
-          ))}
-        </div>
 
-        {/* ── GRABAR ── */}
-        {activeTab === 'grabar' && (
-          <div className="animate-fade-in-up">
-            <div className="relative aspect-video bg-palette-1 rounded-3xl border border-border overflow-hidden mb-6">
-              {/* Live stream – mirrored */}
-              <video
-                ref={videoRef}
-                muted
-                playsInline
-                className={cn(
-                  'w-full h-full object-cover scale-x-[-1]',
-                  recordingState === 'countdown' || recordingState === 'recording' ? 'block' : 'hidden',
-                )}
-              />
+        {/* Model selector dropdown */}
+        <ModelSelector value={modelMode} onChange={changeMode} />
 
-              {/* Recorded preview */}
-              <video
-                ref={previewRef}
-                controls
-                playsInline
-                className={cn('w-full h-full object-cover', recordingState === 'preview' ? 'block' : 'hidden')}
-              />
+        {/* ── ABECEDARIO mode ── */}
+        {modelMode === 'abecedario' && <AbecedarioMode />}
 
-              {recordingState === 'idle' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-palette-3 flex items-center justify-center mb-4">
-                    <Camera className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground text-sm">La cámara se abrirá al iniciar</p>
-                </div>
-              )}
+        {/* ── SEÑAS mode ── */}
+        {modelMode === 'senas' && <SenasMode />}
 
-              {recordingState === 'requesting' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-palette-1">
-                  <p className="text-muted-foreground">Solicitando acceso a la cámara...</p>
-                </div>
-              )}
-
-              {recordingState === 'countdown' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-foreground/10">
-                  <span className="text-8xl font-bold text-palette-2 drop-shadow animate-pulse">{countdown}</span>
-                </div>
-              )}
-
-              {recordingState === 'recording' && (
-                <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-palette-7 rounded-full">
-                  <span className="w-2.5 h-2.5 rounded-full bg-palette-2 animate-pulse" />
-                  <span className="text-foreground text-sm font-medium">Grabando</span>
-                </div>
-              )}
+        {/* ── FRASES COMPLETAS mode ── */}
+        {modelMode === 'frases' && (
+          <>
+            {/* Tab Toggle */}
+            <div className="flex gap-2 p-1 bg-palette-1 rounded-2xl w-fit mb-8">
+              {(['grabar', 'subir'] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => switchTab(tab)}
+                  className={cn(
+                    'px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                    activeTab === tab
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    {tab === 'grabar' ? <Video className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                    {tab === 'grabar' ? 'Grabar video' : 'Subir video'}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {recordingState === 'idle' && (
-              <button
-                onClick={startRecording}
-                className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
-                  hover:bg-palette-4 active:scale-[0.98] transition-all duration-200
-                  flex items-center justify-center gap-2"
-              >
-                <Video className="w-5 h-5" />
-                Iniciar grabación
-              </button>
-            )}
-
-            {recordingState === 'recording' && (
-              <button
-                onClick={stopRecording}
-                className="w-full h-14 bg-palette-7 text-foreground rounded-2xl font-medium
-                  hover:bg-palette-5 active:scale-[0.98] transition-all duration-200
-                  flex items-center justify-center gap-2"
-              >
-                <span className="w-4 h-4 rounded-sm bg-foreground" />
-                Detener grabación
-              </button>
-            )}
-
-            {recordingState === 'preview' && (
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={startProcessing}
-                  className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
-                    hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
-                >
-                  Traducir
-                </button>
-                <button
-                  onClick={resetAll}
-                  className="w-full h-12 bg-transparent border border-border text-foreground rounded-2xl font-medium
-                    hover:bg-palette-1 active:scale-[0.98] transition-all duration-200
-                    flex items-center justify-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Grabar de nuevo
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── SUBIR ── */}
-        {activeTab === 'subir' && (
-          <div className="animate-fade-in-up">
-            {!uploadedFile ? (
-              <>
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="aspect-video bg-palette-1 rounded-3xl border-2 border-dashed border-palette-3
-                    flex flex-col items-center justify-center cursor-pointer
-                    hover:border-palette-2 hover:bg-palette-5 transition-all duration-200 mb-6"
-                >
-                  <div className="w-20 h-20 rounded-full bg-palette-3 flex items-center justify-center mb-4">
-                    <Upload className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <p className="text-foreground font-medium mb-2">Arrastra tu video aquí</p>
-                  <p className="text-muted-foreground text-sm">.mp4, .webm, .mov — máx 100 MB</p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
-                    hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
-                >
-                  Seleccionar video
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="aspect-video bg-palette-1 rounded-3xl border border-border overflow-hidden mb-6">
+            {/* ── GRABAR ── */}
+            {activeTab === 'grabar' && (
+              <div className="animate-fade-in-up">
+                <div className={cn(
+                  'relative bg-palette-1 rounded-3xl border border-border overflow-hidden mb-6',
+                  (recordingState === 'requesting' || recordingState === 'countdown' || recordingState === 'recording')
+                    ? 'h-[62vh] md:h-auto md:aspect-video'
+                    : 'aspect-video',
+                )}>
                   <video
-                    src={URL.createObjectURL(uploadedFile)}
+                    ref={videoRef}
+                    muted
+                    playsInline
+                    className={cn(
+                      'w-full h-full object-cover scale-x-[-1]',
+                      recordingState === 'countdown' || recordingState === 'recording' ? 'block' : 'hidden',
+                    )}
+                  />
+
+                  <video
+                    ref={previewRef}
                     controls
                     playsInline
-                    className="w-full h-full object-contain"
+                    className={cn('w-full h-full object-cover', recordingState === 'preview' ? 'block' : 'hidden')}
                   />
+
+                  {recordingState === 'idle' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <div className="w-20 h-20 rounded-full bg-palette-3 flex items-center justify-center mb-4">
+                        <Camera className="w-10 h-10 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-sm">La cámara se abrirá al iniciar</p>
+                    </div>
+                  )}
+
+                  {recordingState === 'requesting' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-palette-1">
+                      <p className="text-muted-foreground">Solicitando acceso a la cámara...</p>
+                    </div>
+                  )}
+
+                  {recordingState === 'countdown' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-foreground/10">
+                      <span className="text-8xl font-bold text-palette-2 drop-shadow animate-pulse">{countdown}</span>
+                    </div>
+                  )}
+
+                  {recordingState === 'recording' && (
+                    <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-palette-7 rounded-full">
+                      <span className="w-2.5 h-2.5 rounded-full bg-palette-2 animate-pulse" />
+                      <span className="text-foreground text-sm font-medium">Grabando</span>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-col gap-3">
+
+                {recordingState === 'idle' && (
                   <button
-                    onClick={startProcessing}
+                    onClick={startRecording}
                     className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
-                      hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
-                  >
-                    Traducir
-                  </button>
-                  <button
-                    onClick={resetAll}
-                    className="w-full h-12 bg-transparent border border-border text-foreground rounded-2xl font-medium
-                      hover:bg-palette-1 active:scale-[0.98] transition-all duration-200
+                      hover:bg-palette-4 active:scale-[0.98] transition-all duration-200
                       flex items-center justify-center gap-2"
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    Seleccionar otro video
+                    <Video className="w-5 h-5" />
+                    Iniciar grabación
                   </button>
-                </div>
-              </>
+                )}
+
+                {recordingState === 'recording' && (
+                  <button
+                    onClick={stopRecording}
+                    className="w-full h-14 bg-palette-7 text-foreground rounded-2xl font-medium
+                      hover:bg-palette-5 active:scale-[0.98] transition-all duration-200
+                      flex items-center justify-center gap-2"
+                  >
+                    <span className="w-4 h-4 rounded-sm bg-foreground" />
+                    Detener grabación
+                  </button>
+                )}
+
+                {recordingState === 'preview' && (
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={startProcessing}
+                      className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
+                        hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
+                    >
+                      Traducir
+                    </button>
+                    <button
+                      onClick={resetAll}
+                      className="w-full h-12 bg-transparent border border-border text-foreground rounded-2xl font-medium
+                        hover:bg-palette-1 active:scale-[0.98] transition-all duration-200
+                        flex items-center justify-center gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Grabar de nuevo
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
+
+            {/* ── SUBIR ── */}
+            {activeTab === 'subir' && (
+              <div className="animate-fade-in-up">
+                {!uploadedFile ? (
+                  <>
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="aspect-video bg-palette-1 rounded-3xl border-2 border-dashed border-palette-3
+                        flex flex-col items-center justify-center cursor-pointer
+                        hover:border-palette-2 hover:bg-palette-5 transition-all duration-200 mb-6"
+                    >
+                      <div className="w-20 h-20 rounded-full bg-palette-3 flex items-center justify-center mb-4">
+                        <Upload className="w-10 h-10 text-muted-foreground" />
+                      </div>
+                      <p className="text-foreground font-medium mb-2">Arrastra tu video aquí</p>
+                      <p className="text-muted-foreground text-sm">.mp4, .webm, .mov — máx 100 MB</p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
+                        hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
+                    >
+                      Seleccionar video
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="aspect-video bg-palette-1 rounded-3xl border border-border overflow-hidden mb-6">
+                      <video
+                        src={URL.createObjectURL(uploadedFile)}
+                        controls
+                        playsInline
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={startProcessing}
+                        className="w-full h-14 bg-palette-2 text-foreground rounded-2xl font-medium
+                          hover:bg-palette-4 active:scale-[0.98] transition-all duration-200"
+                      >
+                        Traducir
+                      </button>
+                      <button
+                        onClick={resetAll}
+                        className="w-full h-12 bg-transparent border border-border text-foreground rounded-2xl font-medium
+                          hover:bg-palette-1 active:scale-[0.98] transition-all duration-200
+                          flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Seleccionar otro video
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </AppLayout>

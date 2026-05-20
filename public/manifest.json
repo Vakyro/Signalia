@@ -9,16 +9,38 @@
   "theme_color": "#f7b2c4",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "/logo.png",
+      "src": "/512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
+    },
+    {
+      "src": "/384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
     }
+  ],
+  "id": "Signalia",
+  "lang": "es",
+  "display_override": [
+    "window-controls-overlay",
+    "fullscreen"
+  ],
+  "dir": "auto",
+  "orientation": "any",
+  "categories": [
+    "Sign Language",
+    "Hands",
+    "Education",
+    "Translation"
   ]
 }
